@@ -11,7 +11,7 @@ public class RestApiConsumerRouter extends RouteBuilder{
 
 		restConfiguration().host("localhost").port(8000);
 		
-		from("timer:rest-api-consumer?period=10000")
+		from("timer:rest-api-consumer?period=1000000")
 		.setHeader("from", () -> "EUR")
 		.setHeader("to", () -> "INR")
 		.log("${body}")
