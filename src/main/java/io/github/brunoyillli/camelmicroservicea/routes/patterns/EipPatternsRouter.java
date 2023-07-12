@@ -2,19 +2,26 @@ package io.github.brunoyillli.camelmicroservicea.routes.patterns;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.camel.AggregationStrategy;
+import org.apache.camel.Body;
 import org.apache.camel.Exchange;
+import org.apache.camel.ExchangeProperties;
+import org.apache.camel.Headers;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import io.github.brunoyillli.camelmicroservicea.CurrencyExchange;
-import io.github.brunoyillli.camelmicroservicea.routes.patterns.EipPatternsRouter.ArrayListAggregationStrategy;
 
 @Component
 public class EipPatternsRouter  extends RouteBuilder{
+
+
 
 	public class ArrayListAggregationStrategy implements AggregationStrategy {
 
@@ -38,6 +45,9 @@ public class EipPatternsRouter  extends RouteBuilder{
 
 	@Autowired
 	private SplitterComponent splitterComponent;
+	
+	@Autowired
+	DynamicRouterBean dynamicRouterBean;
 	
 	@Override
 	public void configure() throws Exception {
@@ -76,6 +86,16 @@ public class EipPatternsRouter  extends RouteBuilder{
 		.completionSize(3)
 //		.completionTimeout(HIGHEST);
 		.to("log:aggregate-json");
+		
+		String routinSlip = "direct:endpoint1, direct:endpoint2";
+		
+//		from("timer:multicas?period=10000")
+//		.transform().constant("testando varias rotas")
+//		.routingSlip(simple(routinSlip));
+
+		from("timer:multicas?period=10000")
+		.transform().constant("testando varias rotas")
+		.dynamicRouter(method(dynamicRouterBean));
 	}
 	
  
@@ -85,5 +105,30 @@ public class EipPatternsRouter  extends RouteBuilder{
 class SplitterComponent{
 	public List<String> splitInput(String body){
 		return List.of("ABC","DEF", "GHT");
+	}
+}
+
+@Component
+class DynamicRouterBean {
+	
+	Logger logger = LoggerFactory.getLogger(DynamicRouterBean.class);
+	
+	int invocations;
+	
+	public String decideTheNextEndpoint(
+			@ExchangeProperties Map<String, String> properties, 
+			@Headers Map<String, String> headers,
+			@Body String body) {
+		logger.info("{} {} {}", properties, headers, body);
+		
+		invocations++;
+		
+		if(invocations%3==0) {
+			return "direct:endpoint1"; 
+		}
+		if(invocations%3==1) {
+			return "direct:endpoint1,direct:endpoint2";
+		}
+		return null;
 	}
 }
